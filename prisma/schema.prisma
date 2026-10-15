@@ -1,0 +1,476 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ReconnectRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum SavePartnerState {
+  NONE
+  WAITING_FOR_NICKNAME
+}
+
+enum PointsTransactionType {
+  WELCOME_BONUS
+  SAVE_PARTNER
+  RECONNECT
+  VIP_PURCHASE
+  DAILY_REWARD
+  REFERRAL
+  CHAT_EARNING
+  PACKAGE_PURCHASE
+  ADMIN_ADJUSTMENT
+  PROMO_CODE
+}
+
+model User {
+  id                String  @id @default(uuid())
+  telegramUserId    BigInt  @unique
+  username          String?
+  firstName         String
+  lastName          String?
+  languageCode      String?
+  isTelegramPremium Boolean @default(false)
+
+  gender String
+  role   String @default("USER") // USER or ADMIN
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchingQueue MatchingQueue?
+
+  chatSessionsAsUserOne ChatSession[] @relation("ChatSessionUserOne")
+  chatSessionsAsUserTwo ChatSession[] @relation("ChatSessionUserTwo")
+  media                 UserMedia[]
+
+  sentMessages     ChatMessage[] @relation("ChatMessage_senderIdToUser")
+  receivedMessages ChatMessage[] @relation("ChatMessage_receiverIdToUser")
+
+  previousPartnersAsUserOne PreviousPartner[] @relation("PreviousPartnerUserOne")
+  previousPartnersAsUserTwo PreviousPartner[] @relation("PreviousPartnerUserTwo")
+
+  sentReconnectRequests     ReconnectRequest[] @relation("ReconnectRequestSender")
+  receivedReconnectRequests ReconnectRequest[] @relation("ReconnectRequestReceiver")
+
+  pointsBalance Int @default(100)
+
+  isVip         Boolean   @default(false)
+  vipExpiresAt  DateTime?
+  activeVipPlan String?
+
+  age                     Int?
+  country                 String?
+  isProfileComplete       Boolean   @default(false)
+  isVerified              Boolean   @default(false)
+  verifiedAt              DateTime?
+  genderFilterPreference  String?   @default("ANY") // Male, Female, Trans Man, Trans Woman, Non-binary, ANY
+  countryFilterPreference String?   @default("ANY")
+  minAgeFilter            Int?
+  maxAgeFilter            Int?
+  profilePhotoUrl         String?
+
+  isBanned  Boolean @default(false)
+  banReason String?
+
+  lastDailyRewardAt DateTime?
+  referralCode      String?
+  referredById      String?
+
+  referredBy    User?  @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referredUsers User[] @relation("UserReferrals")
+
+  savePartnerState SavePartnerState @default(NONE)
+
+  pointsTransactions  PointsTransaction[]
+  paymentTransactions PaymentTransaction[]
+  vipSubscriptions    VipSubscription[]
+
+  reportsMade     UserReport[] @relation("ReportedBy")
+  reportsReceived UserReport[] @relation("ReportedUser")
+
+  promoCodeRedemptions PromoCodeRedemption[]
+  setting              UserSetting?
+
+  @@index([referralCode])
+}
+
+model UserSetting {
+  id                      String    @id @default(uuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gender                  String?
+  age                     Int?
+  country                 String?
+
+  genderFilterPreference  String?   @default("ANY") // Male, Female, Trans Man, Trans Woman, Non-binary, ANY
+  countryFilterPreference String?   @default("ANY") // Specific country or ANY
+  minAgeFilter            Int?
+  maxAgeFilter            Int?
+
+  isProfileComplete       Boolean   @default(false)
+  isVerified              Boolean   @default(false)
+  verifiedAt              DateTime?
+
+  notificationsEnabled    Boolean   @default(true)
+  autoTranslate           Boolean   @default(false)
+  preferredLanguage       String?   @default("en")
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model MatchingQueue {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  partnerUserId String?
+  status        String  @default("WAITING")
+
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, joinedAt])
+  @@index([partnerUserId])
+}
+
+model ChatSession {
+  id String @id @default(uuid())
+
+  userOneId String
+  userTwoId String
+
+  status String @default("ACTIVE")
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  endReason String?
+
+  userOne  User          @relation("ChatSessionUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwo  User          @relation("ChatSessionUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+  reports  UserReport[]
+
+  @@index([userOneId])
+  @@index([userTwoId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model ChatMessage {
+  id            String   @id @default(uuid())
+  chatSessionId String?
+  senderId      String
+  receiverId    String
+  messageType   String   @default("TEXT")
+  text          String?
+  mediaPath     String?
+  createdAt     DateTime @default(now())
+
+  chatSession ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  sender      User         @relation("ChatMessage_senderIdToUser", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User         @relation("ChatMessage_receiverIdToUser", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId])
+  @@index([createdAt])
+  @@index([receiverId])
+  @@index([senderId])
+}
+
+model UserMedia {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type String
+
+  telegramFileId       String
+  telegramFileUniqueId String?
+
+  fileName String?
+  mimeType String?
+  fileSize BigInt?
+
+  width    Int?
+  height   Int?
+  duration Int?
+
+  caption String?
+
+  telegramMessageId Int
+
+  storagePath String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([telegramFileUniqueId])
+}
+
+model PreviousPartner {
+  id String @id @default(uuid())
+
+  userOneId String
+  userTwoId String
+
+  nickname String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userOne User @relation("PreviousPartnerUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwo User @relation("PreviousPartnerUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId])
+  @@index([userTwoId])
+}
+
+model ReconnectRequest {
+  id String @id @default(uuid())
+
+  senderId   String
+  receiverId String
+
+  status ReconnectRequestStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sender   User @relation("ReconnectRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReconnectRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, status])
+  @@index([receiverId, status])
+}
+
+model PointsTransaction {
+  id String @id @default(uuid())
+
+  userId String
+
+  amount Int
+
+  type PointsTransactionType
+
+  description String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PointsPackage {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  points      Int
+  priceUsd    Float    @default(0.99)
+  starsPrice  Int      @default(50)
+  badge       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payments PaymentTransaction[]
+}
+
+model VipPackage {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  name         String
+  description  String?
+  durationDays Int
+  pointsCost   Int
+  starsPrice   Int      @default(50)
+  priceUsd     Float    @default(0.99)
+  badge        String?
+  features     String?
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions VipSubscription[]
+  payments      PaymentTransaction[]
+
+  @@index([key])
+  @@index([isActive])
+}
+
+model PaymentTransaction {
+  id                      String   @id @default(uuid())
+  userId                  String
+  packageId               String?
+  vipPackageId            String?
+  orderType               String   @default("POINTS_PACKAGE") // POINTS_PACKAGE, VIP_SUBSCRIPTION, MANUAL_CREDIT
+  pointsAmount            Int      @default(0)
+  starsAmount             Int?
+  amountPaid              Float
+  currency                String   @default("USD") // USD, XTR
+  provider                String   @default("TELEGRAM_STARS")
+  providerPaymentId       String?
+  telegramPaymentChargeId String?  @unique
+  providerChargeId        String?
+  orderPayload            String?  @unique
+  status                  String   @default("COMPLETED") // PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED
+  isRefunded              Boolean  @default(false)
+  refundedAt              DateTime?
+  refundReason            String?
+  refundedAmount          Float?
+  description             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         PointsPackage?   @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  vipPackage      VipPackage?      @relation(fields: [vipPackageId], references: [id], onDelete: SetNull)
+  vipSubscription VipSubscription?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderType])
+  @@index([orderPayload])
+  @@index([telegramPaymentChargeId])
+}
+
+model VipSubscription {
+  id                   String   @id @default(uuid())
+  userId               String
+  packageId            String?
+  planKey              String
+  planLabel            String
+  paymentTransactionId String?  @unique
+  paymentMethod        String   @default("TELEGRAM_STARS") // TELEGRAM_STARS, POINTS_BALANCE, ADMIN_GRANT
+  costAmount           Float
+  currency             String   @default("XTR") // XTR, POINTS, USD
+  status               String   @default("ACTIVE") // ACTIVE, EXPIRED, REFUNDED, CANCELLED
+  startedAt            DateTime @default(now())
+  expiresAt            DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package            VipPackage?         @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  paymentTransaction PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model UserReport {
+  id             String   @id @default(uuid())
+  reporterId     String
+  reportedUserId String
+  chatSessionId  String?
+  reason         String
+  details        String?
+  status         String   @default("PENDING") // PENDING, RESOLVED_BANNED, DISMISSED
+  adminNotes     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  reporter     User         @relation("ReportedBy", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User         @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  chatSession  ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BroadcastMessage {
+  id              String   @id @default(uuid())
+  title           String
+  message         String
+  targetAudience  String   @default("ALL") // ALL, VIP_ONLY, ACTIVE_RECENTLY
+  buttonText      String?
+  buttonUrl       String?
+  totalRecipients Int      @default(0)
+  sentCount       Int      @default(0)
+  failedCount     Int      @default(0)
+  status          String   @default("PENDING") // PENDING, SENDING, COMPLETED, FAILED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  category    String   @default("GENERAL") // ECONOMY, MAINTENANCE, GENERAL
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  action    String   // USER_BANNED, POINTS_ADJUSTED, BROADCAST_SENT, SETTINGS_UPDATED, etc.
+  actorId   String?  @default("ADMIN")
+  targetId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model PromoCode {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  pointsReward  Int       @default(50)
+  vipDaysReward Int       @default(0)
+  maxUses       Int       @default(100)
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  redemptions PromoCodeRedemption[]
+
+  @@index([code])
+}
+
+model PromoCodeRedemption {
+  id          String   @id @default(uuid())
+  promoCodeId String
+  userId      String
+  redeemedAt  DateTime @default(now())
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([promoCodeId, userId])
+  @@index([userId])
+}
