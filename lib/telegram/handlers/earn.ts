@@ -69,27 +69,26 @@ export const showEarnMenu = async (ctx: any) => {
     }
 
     const vipInfo = await getUserVipStatus(user.id);
-    const currentPoints = vipInfo.pointsBalance ?? user.pointsBalance;
+    const vipStatusText = vipInfo.isVip
+      ? `👑 Active (${
+          vipInfo.vipExpiresAt
+            ? `Expires: ${new Date(vipInfo.vipExpiresAt).toLocaleDateString()}`
+            : "Active"
+        })`
+      : "Free Plan";
+
     const message =
-      `💰 <b>TalkBuddy Points & Earning Center</b>\n\n` +
+      `⭐ <b>TalkBuddy VIP & Telegram Stars Center</b>\n\n` +
       `👤 <b>User:</b> ${user.firstName}\n` +
-      `💎 <b>Current Balance:</b> <b>${currentPoints} Points</b>\n` +
-      `👑 <b>VIP Status:</b> ${
-        vipInfo.isVip
-          ? `Active (Expires: ${
-              vipInfo.vipExpiresAt
-                ? new Date(vipInfo.vipExpiresAt).toLocaleDateString()
-                : "Active"
-            })`
-          : "Free Plan"
-      }\n\n` +
-      `✨ <b>Ways to Earn & Use Points:</b>\n` +
-      `• 🎁 <b>Daily Bonus:</b> +25 pts every 24 hours\n` +
-      `• 👥 <b>Invite Friends:</b> +50 pts per referral\n` +
-      `• 💬 <b>Chat Activity:</b> +5 pts for conversations\n` +
-      `• 💾 <b>Save Partners:</b> 10 pts per saved contact\n` +
-      `• 👑 <b>VIP Access:</b> Unlock with 80+ pts\n\n` +
-      `Choose an action below:`;
+      `👑 <b>VIP Status:</b> <b>${vipStatusText}</b>\n\n` +
+      `TalkBuddy uses official <b>Telegram Stars (⭐)</b> for instant VIP access and premium privileges.\n\n` +
+      `✨ <b>VIP Privileges:</b>\n` +
+      `• 💖 <b>Gender & Country Filter:</b> Match exclusively with preferred partners\n` +
+      `• 🚀 <b>Priority Queue:</b> Skip wait times and connect immediately\n` +
+      `• 💬 <b>Unlimited Conversations:</b> Chat without interruption\n` +
+      `• 🔄 <b>Saved Partners:</b> Save and reconnect anytime\n` +
+      `• 🗑️ <b>Message Wipe:</b> Erase messages with <code>/delete</code>\n\n` +
+      `👇 <i>Choose an action below to view VIP plans or invite friends:</i>`;
 
     if (ctx.callbackQuery) {
       try {
@@ -231,12 +230,11 @@ export function registerEarnHandler(bot: Telegraf) {
       });
 
       await ctx.editMessageText(
-        `👥 <b>Invite Friends & Earn Points</b>\n\n` +
-          `Share your personal referral link with friends. When they join, you earn <b>+50 Points</b> and they get <b>+25 Points</b>!\n\n` +
+        `👥 <b>Invite Friends to TalkBuddy</b>\n\n` +
+          `Share your personal referral link with friends. Chat anonymously and make new connections across the globe!\n\n` +
           `🔗 <b>Your Invite Link:</b>\n<code>${referralLink}</code>\n\n` +
-          `📊 <b>Your Referrals:</b> ${referralCount} friends joined\n` +
-          `💎 <b>Points Earned from Referrals:</b> ${referralCount * 50} pts\n\n` +
-          `Tap the link above to copy it or forward it to groups!`,
+          `📊 <b>Your Referrals:</b> ${referralCount} friends joined\n\n` +
+          `Tap below to share your link with friends or groups:`,
         {
           parse_mode: "HTML",
           reply_markup: {
@@ -253,7 +251,11 @@ export function registerEarnHandler(bot: Telegraf) {
               ],
               [
                 {
-                  text: "⬅️ Back to Earning Menu",
+                  text: "👑 VIP Plans (⭐ Stars)",
+                  callback_data: "vip_info",
+                },
+                {
+                  text: "⬅️ Back",
                   callback_data: "menu_earn",
                 },
               ],
@@ -267,54 +269,15 @@ export function registerEarnHandler(bot: Telegraf) {
     }
   });
 
-  // Buy points packages
+  // Buy points packages -> redirect to VIP Plans with Stars
   bot.action("earn_buy_points", async (ctx) => {
     try {
       await ctx.answerCbQuery();
-      const packages = await prisma.pointsPackage.findMany({
-        where: { isActive: true },
-        orderBy: { points: "asc" },
-      });
-
-      if (packages.length === 0) {
-        await ctx.editMessageText(
-          "💳 No payment packages available right now. Please check back later.",
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "⬅️ Back", callback_data: "menu_earn" }],
-              ],
-            },
-          }
-        );
-        return;
-      }
-
-      const inlineButtons = packages.map((pkg) => [
-        {
-          text: `⚡ ${pkg.name}: +${pkg.points} pts ($${pkg.priceUsd} / ⭐${pkg.starsPrice})`,
-          callback_data: `pkg_buy_${pkg.id}`,
-        },
-      ]);
-
-      inlineButtons.push([
-        { text: "⬅️ Back to Earning Menu", callback_data: "menu_earn" },
-      ]);
-
-      await ctx.editMessageText(
-        `💳 <b>Buy Points Packages</b>\n\n` +
-          `Get instant Points to save unlimited partners, reconnect anytime, and upgrade to VIP access.\n\n` +
-          `Select a package below to proceed:`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: inlineButtons,
-          },
-        }
-      );
+      const { showVipMenu } = await import("@/lib/telegram/handlers/vip");
+      await showVipMenu(ctx);
     } catch (err) {
       console.error("Package list error:", err);
-      await ctx.reply("❌ Error loading packages.");
+      await ctx.reply("❌ Error loading VIP packages.");
     }
   });
 

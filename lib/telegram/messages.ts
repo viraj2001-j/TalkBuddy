@@ -28,7 +28,6 @@ export function getConnectedMessageWithVip() {
 }
 
 export function getVipMessage(
-  pointsBalance: number = 0,
   isVip: boolean = false,
   vipExpiresAt?: Date | null
 ) {
@@ -49,13 +48,13 @@ export function getVipMessage(
   return (
     `🎀 <b>TalkBuddy VIP Membership</b> 🎀\n\n` +
     statusText +
-    `💎 <b>Your Telegram Points:</b> <b>${pointsBalance} Points</b>\n\n` +
     `✨ <b>Exclusive VIP Perks:</b>\n` +
-    `💖 <b>Gender Filter:</b> Pick exactly who you want to match with!\n` +
+    `💖 <b>Gender & Country Filters:</b> Pick exactly who you want to match with!\n` +
     `🚀 <b>Priority Queue:</b> Skip the wait and match instantly.\n` +
-    `💬 <b>Unlimited Chats:</b> No more daily limits.\n` +
-    `🗑️ <b>Message Wipe:</b> Use <code>/delete</code> to erase messages for both of you!\n\n` +
-    `👇 <i>Select a VIP package below to check your points and activate:</i>`
+    `💬 <b>Unlimited Chats:</b> No more conversation limits.\n` +
+    `🔄 <b>Saved Partners:</b> Reconnect with past partners.\n` +
+    `🗑️ <b>Message Wipe:</b> Use <code>/delete</code> to erase messages for both sides!\n\n` +
+    `⭐ <i>Select a VIP package below to upgrade with Telegram Stars:</i>`
   );
 }
 
@@ -75,38 +74,43 @@ import prisma from "@/lib/db";
 import { getUserVipStatus } from "@/lib/telegram/vip";
 
 export async function showMainMenu(ctx: any) {
-  let pointsInfo = "";
+  let vipInfo = "";
   let isVipUser = false;
   try {
     const rawId = ctx.from?.id;
     if (rawId) {
       const user = await prisma.user.findUnique({
         where: { telegramUserId: BigInt(rawId) },
-        select: { id: true, pointsBalance: true, isVip: true, vipExpiresAt: true },
+        select: { id: true, isVip: true, vipExpiresAt: true },
       });
       if (user) {
-        let points = user.pointsBalance;
         let isVip = user.isVip;
+        let vipExpiresAt = user.vipExpiresAt;
         try {
           const vip = await getUserVipStatus(user.id);
           if (vip) {
-            points = vip.pointsBalance ?? points;
             isVip = vip.isVip ?? isVip;
+            vipExpiresAt = vip.vipExpiresAt ?? vipExpiresAt;
           }
         } catch {}
 
         isVipUser = Boolean(isVip);
-        pointsInfo =
-          `💎 <b>Telegram Points:</b> <b>${points} Points</b>\n` +
-          `👑 <b>VIP Status:</b> <b>${isVip ? "Active" : "Free Plan"}</b>\n\n`;
+        if (isVipUser) {
+          const exp = vipExpiresAt
+            ? `Expires: ${new Date(vipExpiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+            : "Active";
+          vipInfo = `👑 <b>VIP Status:</b> <b>Active</b> (${exp})\n\n`;
+        } else {
+          vipInfo = `👑 <b>VIP Status:</b> <b>Free Plan</b> (Upgrade via /vip)\n\n`;
+        }
       }
     }
   } catch {}
 
   const text =
     "🌍 <b>TalkBuddy Main Menu</b>\n\n" +
-    pointsInfo +
-    "Meet someone. Talk anonymously. Make connections & earn rewards.\n\n" +
+    vipInfo +
+    "Meet someone. Talk anonymously. Make global connections.\n\n" +
     "What would you like to do?";
 
   const reply_markup = getMainMenuKeyboard(isVipUser);

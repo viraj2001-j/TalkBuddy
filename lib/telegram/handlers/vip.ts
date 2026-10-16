@@ -17,70 +17,36 @@ import {
  * Displays package duration, description, Stars price, and Points price,
  * allowing the user to choose their preferred checkout method.
  */
-export function renderVipPackageCheck(plan: VipPlan, pointsBalance: number) {
-  const isPointsSufficient = pointsBalance >= plan.pointsCost;
-  const remainingAfter = pointsBalance - plan.pointsCost;
-
-  let text: string;
-  if (isPointsSufficient) {
-    text =
-      `👑 <b>VIP Package Activation: ${plan.label}</b>\n\n` +
-      `📋 <b>Plan Description:</b> ${plan.description}\n` +
-      `⏳ <b>Duration:</b> ${plan.durationDays} Days\n` +
-      `💰 <b>Package Price:</b> <b>${plan.pointsCost} Telegram Points</b> (or ⭐ ${plan.starsPrice} Stars)\n\n` +
-      `💎 <b>Your Telegram Points:</b> <b>${pointsBalance} Points</b>\n` +
-      `✨ <b>Balance After Activation:</b> <b>${remainingAfter} Points</b>\n\n` +
-      `✅ <b>You have enough Telegram Points to activate this package!</b>\n\n` +
-      `👇 <b>Choose your payment method:</b>`;
-  } else {
-    const missingPoints = plan.pointsCost - pointsBalance;
-    text =
-      `❌ <b>Telegram Points Not Enough!</b>\n\n` +
-      `👑 <b>Package:</b> ${plan.label} VIP (${plan.durationDays} Days)\n` +
-      `📋 <b>Plan Description:</b> ${plan.description}\n` +
-      `💰 <b>Required Points:</b> <b>${plan.pointsCost} Telegram Points</b>\n\n` +
-      `💎 <b>Your Telegram Points:</b> <b>${pointsBalance} Points</b>\n` +
-      `⚠️ <b>Missing:</b> <b>${missingPoints} Telegram Points</b>\n\n` +
-      `💡 <i>You can pay instantly with ⭐ ${plan.starsPrice} Stars (XTR) or top up points below:</i>`;
-  }
+export function renderVipPackageCheck(plan: VipPlan) {
+  const text =
+    `👑 <b>VIP Package Activation: ${plan.label}</b>\n\n` +
+    `📋 <b>Plan Description:</b> ${plan.description}\n` +
+    `⏳ <b>Duration:</b> ${plan.durationDays} Days\n` +
+    `⭐ <b>Price:</b> <b>${plan.starsPrice} Telegram Stars (XTR)</b>\n\n` +
+    `✨ <b>VIP Benefits Included:</b>\n` +
+    `• 🎯 Gender & Country Filters\n` +
+    `• ⚡ Instant Priority Matching (no waiting)\n` +
+    `• 💬 Unlimited Chats\n` +
+    `• 🔄 Reconnect with previous partners\n` +
+    `• 🗑️ Message Wipe with /delete\n\n` +
+    `👇 <b>Tap below to pay with Telegram Stars:</b>`;
 
   const inline_keyboard: any[][] = [
     [
       {
-        text: `⭐ Pay with Stars (⭐${plan.starsPrice} Stars)`,
+        text: `⭐ Pay with Stars (⭐ ${plan.starsPrice} Stars)`,
         callback_data: `vip_stars_${plan.key}`,
+      },
+    ],
+    [
+      {
+        text: "⬅️ Back to VIP Plans",
+        callback_data: "vip_info",
       },
     ],
   ];
 
-  if (isPointsSufficient) {
-    inline_keyboard.push([
-      {
-        text: `💎 Pay with Points (${plan.pointsCost} pts)`,
-        callback_data: `vip_confirm_${plan.key}`,
-      },
-    ]);
-  } else {
-    inline_keyboard.push([
-      {
-        text: `💳 Buy Points (${plan.pointsCost} pts needed)`,
-        callback_data: "earn_buy_points",
-      },
-      {
-        text: "🎁 Daily Bonus",
-        callback_data: "earn_daily",
-      },
-    ]);
-  }
-
-  inline_keyboard.push([
-    {
-      text: "⬅️ Back to VIP Plans",
-      callback_data: "vip_info",
-    },
-  ]);
-
-  return { text, reply_markup: { inline_keyboard }, isSufficient: isPointsSufficient };
+  return { text, reply_markup: { inline_keyboard } };
 }
 
 /**
@@ -89,7 +55,6 @@ export function renderVipPackageCheck(plan: VipPlan, pointsBalance: number) {
 export function renderVipActivatedMessage(
   result: {
     plan: VipPlan;
-    pointsBalance: number;
     vipExpiresAt: Date | null;
   },
   isProfileComplete: boolean = true
@@ -106,8 +71,7 @@ export function renderVipActivatedMessage(
     const text =
       `🎉 <b>VIP Membership Activated!</b> 👑\n\n` +
       `🌟 <b>Unlocked Plan:</b> <b>${result.plan.label}</b>\n` +
-      `📅 <b>Valid Until:</b> <b>${expiresFormatted}</b>\n` +
-      `💎 <b>Remaining Points:</b> <b>${result.pointsBalance} Points</b>\n\n` +
+      `📅 <b>Valid Until:</b> <b>${expiresFormatted}</b>\n\n` +
       `🎯 <b>Setup Your Profile & Gender Filter:</b>\n` +
       `To unlock your <b>VIP Gender Filter</b>, take a few seconds to confirm your Name, Age (optional), Gender, and Location (optional).\n\n` +
       `👇 <i>Tap below to begin quick profile setup & pick your gender filter:</i>`;
@@ -141,8 +105,7 @@ export function renderVipActivatedMessage(
   const text =
     `🎉 <b>VIP Membership Activated!</b> 👑\n\n` +
     `🌟 <b>Unlocked Plan:</b> <b>${result.plan.label}</b>\n` +
-    `📅 <b>Valid Until:</b> <b>${expiresFormatted}</b>\n` +
-    `💎 <b>Remaining Points:</b> <b>${result.pointsBalance} Points</b>\n\n` +
+    `📅 <b>Valid Until:</b> <b>${expiresFormatted}</b>\n\n` +
     `✨ <b>Your VIP Perks Are Now Active:</b>\n` +
     `• 💖 <b>Gender Filter:</b> Unlocked! Customize your preferred partner gender\n` +
     `• 🚀 <b>Priority Queue:</b> Skip the wait and match faster\n` +
@@ -239,8 +202,7 @@ export async function showVipMenu(ctx: any) {
     }
 
     const text = getVipMessage(
-      status.pointsBalance,
-      status.isVip,
+      Boolean(status.isVip),
       status.vipExpiresAt
     );
 
@@ -283,7 +245,7 @@ export async function showVipMenu(ctx: any) {
 }
 
 /**
- * Handles package selection: shows description, Stars price, and Points price.
+ * Handles package selection: shows description and Stars price.
  */
 export async function handleVipPackageSelect(ctx: any, planKey: VipPlanKey) {
   try {
@@ -297,21 +259,7 @@ export async function handleVipPackageSelect(ctx: any, planKey: VipPlanKey) {
       return;
     }
 
-    const user = await getOrCreateTelegramUser(ctx);
-    if (!user) return;
-
-    let pointsBalance = user.pointsBalance;
-    try {
-      const vipStatus = await getUserVipStatus(user.id);
-      if (vipStatus?.pointsBalance !== undefined) {
-        pointsBalance = vipStatus.pointsBalance;
-      }
-    } catch {}
-
-    const { text, reply_markup } = renderVipPackageCheck(
-      plan,
-      pointsBalance
-    );
+    const { text, reply_markup } = renderVipPackageCheck(plan);
 
     try {
       await ctx.editMessageText(text, {
@@ -436,10 +384,7 @@ export async function handleVipConfirmActivation(ctx: any, planKey: VipPlanKey) 
         });
       }
     } else if (result.reason === "INSUFFICIENT_FUNDS") {
-      const { text, reply_markup } = renderVipPackageCheck(
-        plan,
-        result.pointsBalance ?? user.pointsBalance
-      );
+      const { text, reply_markup } = renderVipPackageCheck(plan);
       try {
         await ctx.editMessageText(text, {
           parse_mode: "HTML",
@@ -497,31 +442,27 @@ export async function showUserPurchaseHistory(ctx: any) {
 
     const transactions = user.paymentTransactions || [];
 
-    let currentPoints = user.pointsBalance;
     let isVipActive = user.isVip;
     try {
       const vipStatus = await getUserVipStatus(user.id);
       if (vipStatus) {
-        currentPoints = vipStatus.pointsBalance ?? user.pointsBalance;
         isVipActive = vipStatus.isVip ?? user.isVip;
       }
     } catch {}
 
-    const vipLabel = isVipActive ? "Active" : "Free Plan";
+    const vipLabel = isVipActive ? "👑 Active" : "Free Plan";
 
     if (transactions.length === 0) {
       const emptyText =
         `📜 <b>Your Purchase & Payment History</b>\n\n` +
-        `💎 <b>Current Points Balance:</b> <b>${currentPoints} Points</b>\n` +
         `👑 <b>VIP Status:</b> ${vipLabel}\n\n` +
         `<i>You haven't made any purchases yet.</i>\n` +
-        `Choose an option below to buy VIP or recharge points:`;
+        `Upgrade to VIP with Telegram Stars to unlock gender filters and unlimited chats:`;
 
       const emptyKeyboard = {
         inline_keyboard: [
           [
-            { text: "💎 View VIP Plans", callback_data: "vip_info" },
-            { text: "💳 Buy Points", callback_data: "earn_buy_points" },
+            { text: "👑 VIP Plans (⭐ Stars)", callback_data: "vip_info" },
           ],
           [{ text: "⬅️ Back to Menu", callback_data: "back_main_menu" }],
         ],
@@ -570,14 +511,12 @@ export async function showUserPurchaseHistory(ctx: any) {
         const currencyLabel =
           t.currency === "XTR"
             ? `⭐ ${t.starsAmount ?? t.amountPaid} Stars`
-            : t.currency === "POINTS"
-            ? `💎 ${t.pointsAmount} pts`
             : `$${t.amountPaid} ${t.currency}`;
 
         const itemName =
           t.vipPackage?.name ||
           t.package?.name ||
-          (t.orderType === "VIP_SUBSCRIPTION" ? "VIP Membership" : "Points Top-up");
+          (t.orderType === "VIP_SUBSCRIPTION" ? "VIP Membership" : "Premium Order");
 
         let line = `${idx + 1}. ${statusIcon} <b>${itemName}</b>\n`;
         line += `   💰 <b>Amount:</b> ${currencyLabel} | <b>Status:</b> ${t.status}\n`;
@@ -599,7 +538,6 @@ export async function showUserPurchaseHistory(ctx: any) {
 
     const message =
       `📜 <b>Your Purchase & Payment History</b>\n\n` +
-      `💎 <b>Current Points Balance:</b> <b>${currentPoints} Points</b>\n` +
       `👑 <b>VIP Status:</b> ${vipLabel}\n\n` +
       historyLines +
       `\n<i>Displaying up to 15 recent transactions.</i>`;
@@ -607,8 +545,7 @@ export async function showUserPurchaseHistory(ctx: any) {
     const reply_markup = {
       inline_keyboard: [
         [
-          { text: "💎 View VIP Plans", callback_data: "vip_info" },
-          { text: "💳 Buy Points", callback_data: "earn_buy_points" },
+          { text: "👑 VIP Plans (⭐ Stars)", callback_data: "vip_info" },
         ],
         [{ text: "⬅️ Back to Menu", callback_data: "back_main_menu" }],
       ],

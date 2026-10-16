@@ -3155,8 +3155,6 @@ export function registerCallbackHandlers(bot: Telegraf) {
         await ctx.reply(
           "📝 <b>Saving Partner</b>\n\n" +
             "Enter a nickname for this user (3-15 chars, letters/numbers only).\n\n" +
-            "💰 <b>Cost:</b> 10 Points\n" +
-            `💎 <b>Your balance:</b> ${user.pointsBalance} Points\n\n` +
             "Please send the nickname as your next message.",
           {
             parse_mode: "HTML",

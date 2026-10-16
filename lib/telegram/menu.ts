@@ -191,11 +191,7 @@ export function getMainMenuKeyboard(isVip: boolean = false) {
   keyboard.push(
     [
       {
-        text: "💰 Earn Points & Balance",
-        callback_data: "menu_earn",
-      },
-      {
-        text: "💎 VIP",
+        text: "👑 VIP Plans (⭐ Stars)",
         callback_data: "vip_info",
       },
     ],
@@ -227,24 +223,14 @@ export function getEarnMenuKeyboard() {
     inline_keyboard: [
       [
         {
-          text: "🎁 Claim Daily Reward (+25 pts)",
-          callback_data: "earn_daily",
-        },
-      ],
-      [
-        {
-          text: "👥 Invite Friends (+50 pts)",
-          callback_data: "earn_referral",
-        },
-        {
-          text: "💳 Buy Points Packages",
-          callback_data: "earn_buy_points",
-        },
-      ],
-      [
-        {
-          text: "💎 VIP Plans",
+          text: "👑 VIP Plans (⭐ Stars)",
           callback_data: "vip_info",
+        },
+      ],
+      [
+        {
+          text: "👥 Invite Friends (Referrals)",
+          callback_data: "earn_referral",
         },
         {
           text: "⬅️ Back to Menu",
@@ -270,11 +256,7 @@ export function getWaitingPartnerKeyboard() {
       ],
       [
         {
-          text: "💰 Earn Points",
-          callback_data: "menu_earn",
-        },
-        {
-          text: "💎 VIP",
+          text: "👑 VIP Plans (⭐ Stars)",
           callback_data: "vip_info",
         },
       ],
@@ -310,21 +292,21 @@ export function getVipKeyboard(isVip: boolean = false) {
   keyboard.push(
     [
       {
-        text: "👑 1 Week (80 pts / ⭐50)",
+        text: "👑 1 Week (⭐ 50 Stars)",
         callback_data: "vip_buy_1w",
       },
       {
-        text: "👑 1 Month (250 pts / ⭐150)",
+        text: "👑 1 Month (⭐ 150 Stars)",
         callback_data: "vip_buy_1m",
       },
     ],
     [
       {
-        text: "👑 3 Months (700 pts / ⭐400)",
+        text: "👑 3 Months (⭐ 400 Stars)",
         callback_data: "vip_buy_3m",
       },
       {
-        text: "👑 6 Months (1250 pts / ⭐750)",
+        text: "👑 6 Months (⭐ 750 Stars)",
         callback_data: "vip_buy_6m",
       },
     ],
@@ -385,27 +367,27 @@ export async function setupBotMenu(bot: Telegraf) {
     },
     {
       command: "profile",
-      description: "👤 View your profile, points balance & VIP status",
-    },
-    {
-      command: "balance",
-      description: "💎 Check your Telegram Points balance",
-    },
-    {
-      command: "earn",
-      description: "💰 Earn points, daily bonus & invite friends",
+      description: "👤 View your profile and VIP status",
     },
     {
       command: "vip",
-      description: "👑 Become a VIP User / View Plans",
+      description: "👑 VIP Plans (⭐ Telegram Stars)",
     },
     {
       command: "premium",
-      description: "💎 Buy/Manage Premium",
+      description: "⭐ Buy VIP with Telegram Stars",
+    },
+    {
+      command: "balance",
+      description: "⭐ Check VIP & Stars status",
+    },
+    {
+      command: "earn",
+      description: "⭐ VIP Privileges & Referrals",
     },
     {
       command: "history",
-      description: "📜 View your VIP & points history",
+      description: "📜 View your Telegram Stars purchase history",
     },
     {
       command: "cancel",

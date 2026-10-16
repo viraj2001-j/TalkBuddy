@@ -325,26 +325,6 @@ export async function forwardAnonymousMessage(
 
       const userId = savePartnerUser.id;
 
-      const spendResult = await spendPoints(
-        userId,
-        SAVE_PARTNER_COST,
-        "SAVE_PARTNER",
-        `Saved previous partner nickname: ${validation.nickname}`
-      );
-
-      if (!spendResult.success) {
-        await clearSavePartnerState(userId);
-
-        await ctx.reply(
-          "❌ Not enough Points\n\n" +
-            `💰 Cost: ${SAVE_PARTNER_COST} Points\n` +
-            `💎 Your balance: ${savePartnerUser.pointsBalance} Points\n\n` +
-            "You need more Points to save this partner."
-        );
-
-        return;
-      }
-
       const updateResult = await prisma.previousPartner.updateMany({
         where: {
           id: previousPartner.id,
@@ -372,9 +352,8 @@ export async function forwardAnonymousMessage(
       await clearSavePartnerState(userId);
       await ctx.reply(
         "✅ <b>Partner Saved!</b>\n\n" +
-          `🏷️ Nickname: <b>${validation.nickname}</b>\n` +
-          `💰 Cost: ${SAVE_PARTNER_COST} Points\n` +
-          `💎 Remaining balance: ${spendResult.balance ?? savePartnerUser.pointsBalance - SAVE_PARTNER_COST} Points`,
+          `🏷️ Nickname: <b>${validation.nickname}</b>\n\n` +
+          "You can reconnect with your saved partner anytime from the menu or /reopen.",
         {
           parse_mode: "HTML",
         }

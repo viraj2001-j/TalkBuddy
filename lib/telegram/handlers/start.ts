@@ -149,8 +149,8 @@ export async function handleStart(ctx: any) {
       const refResult = await processReferral(user.id, refCode).catch(console.error);
       if (refResult && refResult.success) {
         await ctx.reply(
-          "🎁 <b>Referral Bonus Applied!</b>\n\n" +
-            "You received <b>+25 bonus Points</b> for joining via an invite link!",
+          "🎁 <b>Welcome to TalkBuddy!</b>\n\n" +
+            "You joined via an invite link. Enjoy chatting anonymously with new people around the world!",
           { parse_mode: "HTML" }
         );
       }

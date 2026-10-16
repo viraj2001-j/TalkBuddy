@@ -523,11 +523,9 @@ export async function handleRefer(ctx: any) {
     });
 
     await ctx.reply(
-      `🧑‍🤝‍🧑 <b>Refer a Friend & Earn Free Rewards!</b>\n\n` +
-        `Share your personal referral link with friends. When they join TalkBuddy:\n` +
-        `• You earn <b>+50 Points</b>\n` +
-        `• They get <b>+25 Points</b>\n\n` +
-        `📊 <b>Your Total Referrals:</b> ${count} Friends (+${count * 50} pts earned)\n\n` +
+      `🧑‍🤝‍🧑 <b>Refer Friends to TalkBuddy!</b>\n\n` +
+        `Share your personal referral link with friends. Chat anonymously and make new connections together!\n\n` +
+        `📊 <b>Your Total Referrals:</b> ${count} Friends joined\n\n` +
         `🔗 <b>Your Referral Link:</b>\n<code>${referralLink}</code>`,
       {
         parse_mode: "HTML",
@@ -620,7 +618,6 @@ export async function handleMyId(ctx: any) {
         `• <b>Age:</b> ${user.age ? `${user.age} yrs` : "Not set"}\n` +
         `• <b>Country:</b> ${user.country ?? "Not set"}\n` +
         `• <b>Profile Status:</b> ${user.isProfileComplete ? "✅ Complete & Verified" : "⚠️ Incomplete"}\n` +
-        `• <b>Points Balance:</b> 💎 <b>${user.pointsBalance} Points</b>\n` +
         `• <b>VIP Status:</b> ${
           vipInfo.isVip
             ? `👑 Active (Expires: ${
@@ -705,7 +702,6 @@ export async function showUserProfile(ctx: any) {
       `• <b>Name:</b> ${escapeHtml(user.firstName || "User")} ${escapeHtml(user.lastName || "")}\n` +
       `• <b>Username:</b> ${user.username ? `@${escapeHtml(user.username)}` : "Not set"}\n` +
       `• <b>Telegram ID:</b> <code>${rawId}</code>\n\n` +
-      `💎 <b>Telegram Points:</b> <b>${pointsBalance} Points</b>\n` +
       `👑 <b>VIP Membership:</b> <b>${vipText}</b>\n\n` +
       `• <b>Gender:</b> ${user.gender || "Not set"}\n` +
       `• <b>Age:</b> ${user.age ? `${user.age} Years` : "⚠️ Not set"}\n` +
@@ -718,8 +714,7 @@ export async function showUserProfile(ctx: any) {
     const markup = {
       inline_keyboard: [
         [
-          { text: "💎 VIP Plans", callback_data: "vip_info" },
-          { text: "💰 Earn Points", callback_data: "menu_earn" },
+          { text: "👑 VIP Plans (⭐ Stars)", callback_data: "vip_info" },
         ],
         [
           {
@@ -823,7 +818,6 @@ export async function renderSettingsMenu(ctx: any) {
 
     const text =
       `⚙️ <b>TalkBuddy User Settings &amp; Verification</b>\n\n` +
-      `💎 <b>Telegram Points:</b> <b>${pointsBalance} Points</b>\n` +
       `👑 <b>VIP Status:</b> <b>${isVip ? "ACTIVE" : "Free Plan"}</b>\n\n` +
       `👤 <b>Profile Details:</b>\n` +
       `• <b>Gender:</b> ${userGender}\n` +
