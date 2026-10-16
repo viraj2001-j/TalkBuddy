@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -51,13 +51,7 @@ function PurchasesContent() {
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedReceipt, setSelectedReceipt] = useState<PurchaseRecord | null>(null);
 
-  useEffect(() => {
-    if (activeTelegramId) {
-      loadUserData(activeTelegramId);
-    }
-  }, [activeTelegramId]);
-
-  async function loadUserData(telegramId: string) {
+  const loadUserData = useCallback(async (telegramId: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -76,7 +70,13 @@ function PurchasesContent() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (activeTelegramId) {
+      loadUserData(activeTelegramId);
+    }
+  }, [activeTelegramId, loadUserData]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();

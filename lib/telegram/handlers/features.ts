@@ -9,7 +9,7 @@ import {
 } from "@/lib/telegram/messages";
 import { getWaitingPartnerKeyboard } from "@/lib/telegram/menu";
 import { getUserVipStatus } from "@/lib/telegram/vip";
-import { redeemPromoCode, ensureDefaultPromoCodes } from "@/lib/promocodes";
+import { redeemPromoCode } from "@/lib/promocodes";
 import { showVipMenu } from "@/lib/telegram/handlers/vip";
 import {
   createReconnectRequest,
@@ -656,7 +656,7 @@ export async function showUserProfile(ctx: any) {
     if (!rawId) return;
 
     const telegramUserId = BigInt(rawId);
-    let user = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { telegramUserId },
     });
 
@@ -1163,9 +1163,6 @@ export async function handlePaySupport(ctx: any) {
 // Register all Feature Handlers in Telegraf
 // ==========================================
 export function registerFeatureHandlers(bot: Telegraf) {
-  // Ensure default promo codes exist
-  ensureDefaultPromoCodes().catch(console.error);
-
   // Command handlers
   bot.command("search", handleSearch);
   bot.command("stop", handleEnd);

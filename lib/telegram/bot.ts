@@ -11,20 +11,18 @@ import { registerReportHandler } from "./handlers/report";
 import { registerFeatureHandlers } from "./handlers/features";
 import { registerPaymentHandlers } from "./handlers/payment";
 import { registerVipOnboardingHandlers } from "./handlers/vip-onboarding";
-import { setupBotMenu } from "./menu";
-
-const token = process.env.TELEGRAM_BOT_TOKEN;
 
 let botInstance: Telegraf | null = null;
 
 export function getBot(): Telegraf {
   if (botInstance) return botInstance;
 
-  if (!token) {
-    throw new Error("TELEGRAM_BOT_TOKEN is missing");
+  const currentToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!currentToken) {
+    throw new Error("TELEGRAM_BOT_TOKEN is missing in environment variables");
   }
 
-  const bot = new Telegraf(token);
+  const bot = new Telegraf(currentToken);
 
   // Enforce security ban check on all incoming messages and callbacks
   bot.use(async (ctx, next) => {
@@ -50,13 +48,13 @@ export function getBot(): Telegraf {
   registerVipOnboardingHandlers(bot);
   registerMessageHandler(bot);
 
-  // Synchronize Telegram command menu with Telegram Bot API
-  setupBotMenu(bot).catch((err) => {
-    console.error("Failed to automatically synchronize bot menu:", err);
-  });
-
   botInstance = bot;
   return bot;
 }
 
-export const bot = token ? getBot() : (null as any);
+// Lazy bot proxy: only instantiates when accessed at runtime, preventing eager build-time execution
+export const bot = new Proxy({} as Telegraf, {
+  get(_target, prop) {
+    return (getBot() as any)[prop];
+  },
+});

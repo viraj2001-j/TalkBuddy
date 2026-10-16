@@ -1,6 +1,9 @@
 import prisma from "@/lib/db";
 
+let hasSeededPromoCodes = false;
+
 export async function ensureDefaultPromoCodes() {
+  if (hasSeededPromoCodes) return;
   try {
     const existing = await prisma.promoCode.findFirst();
     if (!existing) {
@@ -28,6 +31,7 @@ export async function ensureDefaultPromoCodes() {
         skipDuplicates: true,
       });
     }
+    hasSeededPromoCodes = true;
   } catch (err) {
     console.error("Failed to seed promo codes:", err);
   }
@@ -35,6 +39,8 @@ export async function ensureDefaultPromoCodes() {
 
 export async function redeemPromoCode(userId: string, rawCode: string) {
   const code = rawCode.trim().toUpperCase();
+
+  await ensureDefaultPromoCodes();
 
   return await prisma.$transaction(async (tx) => {
     const promo = await tx.promoCode.findUnique({

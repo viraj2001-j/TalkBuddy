@@ -550,7 +550,7 @@ export async function showUserPurchaseHistory(ctx: any) {
       return;
     }
 
-    let historyLines = transactions
+    const historyLines = transactions
       .map((t, idx) => {
         const dateStr = new Date(t.createdAt).toLocaleDateString("en-US", {
           month: "short",

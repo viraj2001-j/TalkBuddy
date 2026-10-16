@@ -6,6 +6,8 @@
     "dev": "next dev",
     "bot": "tsx scripts/start-polling.ts",
     "set-webhook": "tsx scripts/set-webhook.ts",
+    "sync-menu": "tsx scripts/sync-telegram-menu.ts",
+    "postinstall": "prisma generate",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint"
