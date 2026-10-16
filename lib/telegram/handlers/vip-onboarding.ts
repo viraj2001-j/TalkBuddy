@@ -10,28 +10,120 @@ function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;");
 }
 
-/**
- * Step 1/4: Name Confirmation / Edit
- */
-export async function renderVipStepName(ctx: Context, user: any) {
-  const currentName = escapeHtml(user.firstName || ctx.from?.first_name || "User");
+// ==========================================
+// CODE MAPPINGS (Stateless Compact Encoding)
+// ==========================================
+
+function decodeAge(code: string): number | null {
+  const n = parseInt(code, 10);
+  return n > 0 ? n : null;
+}
+
+function ageLabel(code: string): string {
+  switch (code) {
+    case "20": return "18-21 Years";
+    case "24": return "22-25 Years";
+    case "28": return "26-30 Years";
+    case "33": return "31-35 Years";
+    case "38": return "36-40 Years";
+    case "45": return "40+ Years";
+    default: return "Not set (Skipped)";
+  }
+}
+
+function decodeGender(code: string): string {
+  switch (code) {
+    case "M": return "Male";
+    case "F": return "Female";
+    case "TM": return "Trans Man";
+    case "TW": return "Trans Woman";
+    case "NB": return "Non-binary";
+    default: return "Male";
+  }
+}
+
+function genderLabel(code: string): string {
+  switch (code) {
+    case "M": return "👨 Male";
+    case "F": return "👩 Female";
+    case "TM": return "🏳️‍⚧️ Trans Man";
+    case "TW": return "🏳️‍⚧️ Trans Woman";
+    case "NB": return "🧑 Non-binary";
+    default: return "Not set";
+  }
+}
+
+function decodeCountry(code: string): string | null {
+  switch (code) {
+    case "LK": return "Sri Lanka";
+    case "IN": return "India";
+    case "US": return "United States";
+    case "GB": return "United Kingdom";
+    case "AE": return "UAE";
+    case "CA": return "Canada";
+    case "WW": return "Worldwide";
+    default: return null;
+  }
+}
+
+function countryLabel(code: string): string {
+  switch (code) {
+    case "LK": return "🇱🇰 Sri Lanka";
+    case "IN": return "🇮🇳 India";
+    case "US": return "🇺🇸 United States";
+    case "GB": return "🇬🇧 United Kingdom";
+    case "AE": return "🇦🇪 UAE / Gulf";
+    case "CA": return "🇨🇦 Canada";
+    case "WW": return "🌍 Worldwide";
+    default: return "Not set (Skipped)";
+  }
+}
+
+function decodeFilter(code: string): string {
+  switch (code) {
+    case "F": return "Female";
+    case "M": return "Male";
+    case "TM": return "Trans Man";
+    case "ANY": return "ANY";
+    default: return "ANY";
+  }
+}
+
+function filterLabel(code: string): string {
+  switch (code) {
+    case "F": return "👩 Women (Female)";
+    case "M": return "👨 Men (Male)";
+    case "TM": return "🏳️‍⚧️ Trans";
+    case "ANY": return "🔄 Anyone (Fastest)";
+    default: return "🔄 Anyone";
+  }
+}
+
+// ==========================================
+// STEP 1: AGE (No database write)
+// ==========================================
+export async function renderVipStepAge(ctx: Context) {
   const text =
-    `🎯 <b>VIP Profile Setup (Step 1 of 4): Name</b>\n\n` +
-    `👤 <b>Your Display Name:</b> <b>${currentName}</b>\n\n` +
-    `Confirm your name to continue, or tap below to proceed:`;
+    `🎯 <b>VIP Profile Setup (Step 1 of 4): Age</b> <i>(Optional)</i>\n\n` +
+    `Select your age group below, or tap <b>Skip</b>:\n\n` +
+    `<i>⚠️ Nothing will be saved to your profile until you tap Complete at the end.</i>`;
 
   const reply_markup = {
     inline_keyboard: [
       [
-        {
-          text: `✅ Keep "${currentName}" & Next ➡️`,
-          callback_data: "vip_step_age",
-        },
+        { text: "18-21", callback_data: "vip_ob_age_20" },
+        { text: "22-25", callback_data: "vip_ob_age_24" },
+        { text: "26-30", callback_data: "vip_ob_age_28" },
+      ],
+      [
+        { text: "31-35", callback_data: "vip_ob_age_33" },
+        { text: "36-40", callback_data: "vip_ob_age_38" },
+        { text: "40+", callback_data: "vip_ob_age_45" },
       ],
       [
         {
-          text: "⏭️ Skip to Gender Filter",
-          callback_data: "vip_filter_select",
+          text: "⏭️ Skip Age & Next ➡️",
+          callback_data: "vip_ob_age_0",
         },
       ],
       [
@@ -46,38 +138,82 @@ export async function renderVipStepName(ctx: Context, user: any) {
   await safeEditOrReply(ctx, text, reply_markup);
 }
 
-/**
- * Step 2/4: Age Selection (Optional)
- */
-export async function renderVipStepAge(ctx: Context, user: any) {
-  const currentAge = user.age ? `${user.age} Years` : "Not set";
+// ==========================================
+// STEP 2: GENDER (No database write)
+// ==========================================
+export async function renderVipStepGender(ctx: Context, ageCode: string) {
   const text =
-    `🎯 <b>VIP Profile Setup (Step 2 of 4): Age</b> <i>(Optional)</i>\n\n` +
-    `🎂 <b>Current Age:</b> <b>${currentAge}</b>\n\n` +
-    `Select your age group below, or tap <b>Skip</b> to proceed without setting an age:`;
+    `🎯 <b>VIP Profile Setup (Step 2 of 4): Your Gender</b>\n\n` +
+    `• Selected Age: <b>${ageLabel(ageCode)}</b>\n\n` +
+    `Please select your gender for accurate matching:\n\n` +
+    `<i>⚠️ Nothing will be saved to your profile until you tap Complete at the end.</i>`;
 
   const reply_markup = {
     inline_keyboard: [
       [
-        { text: "18-21", callback_data: "vip_save_age_20" },
-        { text: "22-25", callback_data: "vip_save_age_24" },
-        { text: "26-30", callback_data: "vip_save_age_28" },
+        { text: "👨 Male", callback_data: `vip_ob_gen_${ageCode}_M` },
+        { text: "👩 Female", callback_data: `vip_ob_gen_${ageCode}_F` },
       ],
       [
-        { text: "31-35", callback_data: "vip_save_age_33" },
-        { text: "36-40", callback_data: "vip_save_age_38" },
-        { text: "40+", callback_data: "vip_save_age_45" },
+        { text: "🏳️‍⚧️ Trans Man", callback_data: `vip_ob_gen_${ageCode}_TM` },
+        { text: "🏳️‍⚧️ Trans Woman", callback_data: `vip_ob_gen_${ageCode}_TW` },
+      ],
+      [
+        { text: "🧑 Non-binary", callback_data: `vip_ob_gen_${ageCode}_NB` },
+      ],
+      [
+        { text: "⬅️ Back to Age", callback_data: "vip_onboard_start" },
+      ],
+    ],
+  };
+
+  await safeEditOrReply(ctx, text, reply_markup);
+}
+
+// ==========================================
+// STEP 3: LOCATION (No database write)
+// ==========================================
+export async function renderVipStepLocation(
+  ctx: Context,
+  ageCode: string,
+  genderCode: string
+) {
+  const text =
+    `🎯 <b>VIP Profile Setup (Step 3 of 4): Your Country</b> <i>(Optional)</i>\n\n` +
+    `• Age: <b>${ageLabel(ageCode)}</b>\n` +
+    `• Gender: <b>${genderLabel(genderCode)}</b>\n\n` +
+    `Select your location, or tap <b>Skip</b>:\n\n` +
+    `<i>⚠️ Nothing will be saved to your profile until you tap Complete at the end.</i>`;
+
+  const prefix = `vip_ob_loc_${ageCode}_${genderCode}`;
+
+  const reply_markup = {
+    inline_keyboard: [
+      [
+        { text: "🇱🇰 Sri Lanka", callback_data: `${prefix}_LK` },
+        { text: "🇮🇳 India", callback_data: `${prefix}_IN` },
+      ],
+      [
+        { text: "🇺🇸 United States", callback_data: `${prefix}_US` },
+        { text: "🇬🇧 United Kingdom", callback_data: `${prefix}_GB` },
+      ],
+      [
+        { text: "🇦🇪 UAE / Gulf", callback_data: `${prefix}_AE` },
+        { text: "🇨🇦 Canada", callback_data: `${prefix}_CA` },
+      ],
+      [
+        { text: "🌍 Worldwide / Other", callback_data: `${prefix}_WW` },
       ],
       [
         {
-          text: "⏭️ Skip Age & Next ➡️",
-          callback_data: "vip_step_gender",
+          text: "⏭️ Skip Country & Next ➡️",
+          callback_data: `${prefix}_0`,
         },
       ],
       [
         {
-          text: "⬅️ Back",
-          callback_data: "vip_step_name",
+          text: "⬅️ Back to Gender",
+          callback_data: `vip_ob_age_${ageCode}`,
         },
       ],
     ],
@@ -86,73 +222,57 @@ export async function renderVipStepAge(ctx: Context, user: any) {
   await safeEditOrReply(ctx, text, reply_markup);
 }
 
-/**
- * Step 3/4: Gender Selection (Required for accurate filtering)
- */
-export async function renderVipStepGender(ctx: Context, user: any) {
-  const currentGender = user.gender ? escapeHtml(user.gender) : "Not set";
+// ==========================================
+// STEP 4: TARGET GENDER FILTER (No database write)
+// ==========================================
+export async function renderVipStepFilter(
+  ctx: Context,
+  ageCode: string,
+  genderCode: string,
+  locCode: string
+) {
   const text =
-    `🎯 <b>VIP Profile Setup (Step 3 of 4): Gender</b>\n\n` +
-    `👤 <b>Your Gender:</b> <b>${currentGender}</b>\n\n` +
-    `Please select your gender so our partner filter matches you accurately:`;
+    `🎯 <b>VIP Profile Setup (Step 4 of 4): Matching Gender Filter</b>\n\n` +
+    `• Age: <b>${ageLabel(ageCode)}</b>\n` +
+    `• Gender: <b>${genderLabel(genderCode)}</b>\n` +
+    `• Country: <b>${countryLabel(locCode)}</b>\n\n` +
+    `👑 <b>Choose who you want to match with:</b>\n` +
+    `TalkBuddy will match you according to an <b>80% priority ratio</b> (8 out of 10 matches will be your chosen gender):\n\n` +
+    `<i>⚠️ Nothing will be saved to your profile until you tap Complete on the next step.</i>`;
+
+  const prefix = `vip_ob_rev_${ageCode}_${genderCode}_${locCode}`;
 
   const reply_markup = {
     inline_keyboard: [
-      [
-        { text: "👨 Male", callback_data: "vip_save_gender_Male" },
-        { text: "👩 Female", callback_data: "vip_save_gender_Female" },
-      ],
-      [
-        { text: "🏳️‍⚧️ Trans Man", callback_data: "vip_save_gender_Trans Man" },
-        { text: "🏳️‍⚧️ Trans Woman", callback_data: "vip_save_gender_Trans Woman" },
-      ],
-      [
-        { text: "🧑 Non-binary", callback_data: "vip_save_gender_Non-binary" },
-      ],
-      [
-        { text: "⬅️ Back to Age", callback_data: "vip_step_age" },
-      ],
-    ],
-  };
-
-  await safeEditOrReply(ctx, text, reply_markup);
-}
-
-/**
- * Step 4/4: Location Selection (Optional)
- */
-export async function renderVipStepLocation(ctx: Context, user: any) {
-  const currentCountry = user.country ? escapeHtml(user.country) : "Not set";
-  const text =
-    `🎯 <b>VIP Profile Setup (Step 4 of 4): Location</b> <i>(Optional)</i>\n\n` +
-    `🌍 <b>Current Country:</b> <b>${currentCountry}</b>\n\n` +
-    `Select your country or region below, or tap <b>Skip</b> to proceed:`;
-
-  const reply_markup = {
-    inline_keyboard: [
-      [
-        { text: "🇱🇰 Sri Lanka", callback_data: "vip_save_country_Sri Lanka" },
-        { text: "🇮🇳 India", callback_data: "vip_save_country_India" },
-      ],
-      [
-        { text: "🇺🇸 United States", callback_data: "vip_save_country_United States" },
-        { text: "🇬🇧 United Kingdom", callback_data: "vip_save_country_United Kingdom" },
-      ],
-      [
-        { text: "🇦🇪 UAE / Gulf", callback_data: "vip_save_country_UAE" },
-        { text: "🇨🇦 Canada", callback_data: "vip_save_country_Canada" },
-      ],
-      [
-        { text: "🌍 Worldwide / Other", callback_data: "vip_save_country_Worldwide" },
-      ],
       [
         {
-          text: "⏭️ Skip Location & Choose Filter ➡️",
-          callback_data: "vip_filter_select",
+          text: "👩 Match with Women (Female) — 80%",
+          callback_data: `${prefix}_F`,
         },
       ],
       [
-        { text: "⬅️ Back to Gender", callback_data: "vip_step_gender" },
+        {
+          text: "👨 Match with Men (Male) — 80%",
+          callback_data: `${prefix}_M`,
+        },
+      ],
+      [
+        {
+          text: "🏳️‍⚧️ Match with Trans — 80%",
+          callback_data: `${prefix}_TM`,
+        },
+      ],
+      [
+        {
+          text: "🔄 Match with Anyone (Fastest)",
+          callback_data: `${prefix}_ANY`,
+        },
+      ],
+      [
+        {
+          text: "⬅️ Back to Country",
+          callback_data: `vip_ob_gen_${ageCode}_${genderCode}`,
+        },
       ],
     ],
   };
@@ -160,9 +280,58 @@ export async function renderVipStepLocation(ctx: Context, user: any) {
   await safeEditOrReply(ctx, text, reply_markup);
 }
 
-/**
- * Final Step: Dedicated VIP Gender Filter Menu
- */
+// ==========================================
+// STEP 5: REVIEW SCREEN WITH COMPLETE BUTTON (No database write yet)
+// ==========================================
+export async function renderVipReviewScreen(
+  ctx: Context,
+  ageCode: string,
+  genderCode: string,
+  locCode: string,
+  filterCode: string
+) {
+  const donePayload = `vip_ob_done_${ageCode}_${genderCode}_${locCode}_${filterCode}`;
+
+  const text =
+    `🎯 <b>VIP Profile & Filter Setup Summary</b>\n\n` +
+    `Please review all your details before completing setup:\n\n` +
+    `• <b>Your Age:</b> <b>${ageLabel(ageCode)}</b>\n` +
+    `• <b>Your Gender:</b> <b>${genderLabel(genderCode)}</b>\n` +
+    `• <b>Your Location:</b> <b>${countryLabel(locCode)}</b>\n` +
+    `• <b>Target Match Filter:</b> <b>${filterLabel(filterCode)}</b>\n` +
+    `• <b>Match Priority:</b> ⭐ <b>80% ${filterLabel(filterCode)} / 20% Other</b>\n\n` +
+    `⚠️ <b>Notice:</b> Until you tap the <b>Complete</b> button below, none of these details are saved to your profile.\n\n` +
+    `👇 <b>Tap below to complete and save everything:</b>`;
+
+  const reply_markup = {
+    inline_keyboard: [
+      [
+        {
+          text: "✅ Complete & Save Profile",
+          callback_data: donePayload,
+        },
+      ],
+      [
+        {
+          text: "🔄 Start Over",
+          callback_data: "vip_onboard_start",
+        },
+      ],
+      [
+        {
+          text: "❌ Cancel",
+          callback_data: "back_main_menu",
+        },
+      ],
+    ],
+  };
+
+  await safeEditOrReply(ctx, text, reply_markup);
+}
+
+// ==========================================
+// DEDICATED VIP GENDER FILTER MENU (/filter)
+// ==========================================
 export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
   const rawId = ctx.from?.id;
   if (!rawId) return;
@@ -178,7 +347,7 @@ export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
 
     const reply_markup = {
       inline_keyboard: [
-        [{ text: "👑 View VIP Plans", callback_data: "vip_info" }],
+        [{ text: "👑 VIP Plans (⭐ Stars)", callback_data: "vip_info" }],
         [{ text: "⬅️ Main Menu", callback_data: "back_main_menu" }],
       ],
     };
@@ -188,9 +357,9 @@ export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
 
   const activeFilter = user.genderFilterPreference || "ANY";
   let filterDisplay = "🔄 Any Gender (Fastest)";
-  if (activeFilter === "Female") filterDisplay = "👩 Female Only (Women)";
-  else if (activeFilter === "Male") filterDisplay = "👨 Male Only (Men)";
-  else if (activeFilter.includes("Trans")) filterDisplay = "🏳️‍⚧️ Trans Only";
+  if (activeFilter === "Female") filterDisplay = "👩 Female (80% Women / 20% Other)";
+  else if (activeFilter === "Male") filterDisplay = "👨 Male (80% Men / 20% Other)";
+  else if (activeFilter.includes("Trans")) filterDisplay = "🏳️‍⚧️ Trans (80% Trans / 20% Other)";
 
   const userName = escapeHtml(user.firstName || ctx.from?.first_name || "User");
   const userGender = escapeHtml(user.gender || "Not set");
@@ -199,15 +368,14 @@ export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
 
   const text =
     `👑 <b>VIP Partner Gender Filter</b> 🎯\n\n` +
-    `👤 <b>Your Profile:</b>\n` +
+    `👤 <b>Your Current Profile:</b>\n` +
     `• Name: <b>${userName}</b>\n` +
     `• Your Gender: <b>${userGender}</b>\n` +
     `• Age: <b>${userAge}</b>\n` +
     `• Location: <b>${userLocation}</b>\n\n` +
     `🎯 <b>Active Matching Filter:</b>\n` +
     `👉 <b>${filterDisplay}</b>\n\n` +
-    `👇 <b>Choose who you want to match with:</b>\n` +
-    `Our matchmaking queue will prioritize partners matching your exact selection:`;
+    `Select a filter below, or tap <b>Setup Full Profile</b>:`;
 
   const isFemaleSelected = activeFilter === "Female";
   const isMaleSelected = activeFilter === "Male";
@@ -218,42 +386,38 @@ export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
     inline_keyboard: [
       [
         {
-          text: `${isFemaleSelected ? "✅ " : ""}👩 Match with Women (Female)`,
-          callback_data: "vip_set_filter_Female",
+          text: `${isFemaleSelected ? "✅ " : ""}👩 Women (80% Female / 20% Male)`,
+          callback_data: "vip_ask_filter_Female",
         },
       ],
       [
         {
-          text: `${isMaleSelected ? "✅ " : ""}👨 Match with Men (Male)`,
-          callback_data: "vip_set_filter_Male",
+          text: `${isMaleSelected ? "✅ " : ""}👨 Men (80% Male / 20% Female)`,
+          callback_data: "vip_ask_filter_Male",
         },
       ],
       [
         {
-          text: `${isTransSelected ? "✅ " : ""}🏳️‍⚧️ Match with Trans`,
-          callback_data: "vip_set_filter_Trans Man",
+          text: `${isTransSelected ? "✅ " : ""}🏳️‍⚧️ Trans (80% Trans / 20% Other)`,
+          callback_data: "vip_ask_filter_Trans Man",
         },
       ],
       [
         {
-          text: `${isAnySelected ? "✅ " : ""}🔄 Match with Anyone (Fastest)`,
-          callback_data: "vip_set_filter_ANY",
+          text: `${isAnySelected ? "✅ " : ""}🔄 Anyone (Fastest)`,
+          callback_data: "vip_ask_filter_ANY",
+        },
+      ],
+      [
+        {
+          text: "🎯 Setup Full VIP Profile (Age, Gender, Filter)",
+          callback_data: "vip_onboard_start",
         },
       ],
       [
         {
           text: "🔎 Start Matching Now",
           callback_data: "menu_find",
-        },
-      ],
-      [
-        {
-          text: "✏️ Edit Profile Info",
-          callback_data: "vip_step_name",
-        },
-        {
-          text: "⚙️ Settings",
-          callback_data: "menu_settings",
         },
       ],
       [
@@ -268,9 +432,9 @@ export async function renderVipGenderFilterMenu(ctx: Context, user: any) {
   await safeEditOrReply(ctx, text, reply_markup);
 }
 
-/**
- * Helper to safely edit previous message or send fresh reply if editing isn't possible
- */
+// ==========================================
+// HELPER: SAFE EDIT OR REPLY
+// ==========================================
 async function safeEditOrReply(ctx: Context, text: string, reply_markup: any) {
   if (ctx.callbackQuery) {
     try {
@@ -291,9 +455,9 @@ async function safeEditOrReply(ctx: Context, text: string, reply_markup: any) {
   });
 }
 
-/**
- * Handle /filter command directly
- */
+// ==========================================
+// COMMAND: /filter
+// ==========================================
 export async function handleGenderFilterCommand(ctx: Context) {
   try {
     const rawId = ctx.from?.id;
@@ -312,142 +476,236 @@ export async function handleGenderFilterCommand(ctx: Context) {
   }
 }
 
-/**
- * Register all VIP Onboarding and Gender Filter actions on the Telegraf bot instance
- */
+// ==========================================
+// REGISTER ALL VIP ONBOARDING & FILTER HANDLERS
+// ==========================================
 export function registerVipOnboardingHandlers(bot: Telegraf) {
-  // Command: /filter
   bot.command("filter", handleGenderFilterCommand);
   bot.command("genderfilter", handleGenderFilterCommand);
 
-  // Entry: Start VIP profile setup & filter flow
+  // 1. Entry: Start VIP profile setup (starts at Step 1: Age)
   bot.action("vip_onboard_start", async (ctx) => {
     try {
       await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      if (!user) return;
-
-      // Start at Step 1: Name
-      await renderVipStepName(ctx, user);
+      await renderVipStepAge(ctx);
     } catch (err) {
       console.error("vip_onboard_start error:", err);
     }
   });
 
-  // Step 1: Name
-  bot.action("vip_step_name", async (ctx) => {
+  // 2. Step 1 -> Step 2: User picked age code
+  bot.action(/^vip_ob_age_(\d+)$/, async (ctx) => {
     try {
       await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      if (user) await renderVipStepName(ctx, user);
-    } catch (err) {}
-  });
-
-  // Step 2: Age
-  bot.action("vip_step_age", async (ctx) => {
-    try {
-      await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      if (user) await renderVipStepAge(ctx, user);
-    } catch (err) {}
-  });
-
-  // Step 2 Save Age
-  bot.action(/^vip_save_age_(\d+)$/, async (ctx) => {
-    try {
-      await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const age = parseInt(ctx.match[1], 10);
-      await saveUserSetting(BigInt(rawId), { age });
-
-      const updatedUser = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      // Move to Step 3: Gender
-      if (updatedUser) await renderVipStepGender(ctx, updatedUser);
+      const ageCode = ctx.match[1];
+      await renderVipStepGender(ctx, ageCode);
     } catch (err) {
-      console.error("vip_save_age error:", err);
+      console.error("vip_ob_age error:", err);
     }
   });
 
-  // Step 3: Gender
-  bot.action("vip_step_gender", async (ctx) => {
+  // 3. Step 2 -> Step 3: User picked gender code
+  bot.action(/^vip_ob_gen_(\d+)_(M|F|TM|TW|NB)$/, async (ctx) => {
     try {
       await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      if (user) await renderVipStepGender(ctx, user);
-    } catch (err) {}
-  });
-
-  // Step 3 Save Gender
-  bot.action(/^vip_save_gender_(.+)$/, async (ctx) => {
-    try {
-      await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const gender = ctx.match[1];
-      await saveUserSetting(BigInt(rawId), { gender });
-
-      const updatedUser = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      // Move to Step 4: Location
-      if (updatedUser) await renderVipStepLocation(ctx, updatedUser);
+      const ageCode = ctx.match[1];
+      const genderCode = ctx.match[2];
+      await renderVipStepLocation(ctx, ageCode, genderCode);
     } catch (err) {
-      console.error("vip_save_gender error:", err);
+      console.error("vip_ob_gen error:", err);
     }
   });
 
-  // Step 4: Location
-  bot.action("vip_step_location", async (ctx) => {
+  // 4. Step 3 -> Step 4: User picked location code
+  bot.action(/^vip_ob_loc_(\d+)_(M|F|TM|TW|NB)_([A-Z0-9]+)$/, async (ctx) => {
     try {
       await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      if (user) await renderVipStepLocation(ctx, user);
-    } catch (err) {}
-  });
-
-  // Step 4 Save Country
-  bot.action(/^vip_save_country_(.+)$/, async (ctx) => {
-    try {
-      await ctx.answerCbQuery().catch(() => {});
-      const rawId = ctx.from?.id;
-      if (!rawId) return;
-      const country = ctx.match[1];
-      await saveUserSetting(BigInt(rawId), { country });
-
-      const updatedUser = await prisma.user.findUnique({
-        where: { telegramUserId: BigInt(rawId) },
-      });
-      // Complete! Move to Final Step: Gender Filter
-      if (updatedUser) await renderVipGenderFilterMenu(ctx, updatedUser);
+      const ageCode = ctx.match[1];
+      const genderCode = ctx.match[2];
+      const locCode = ctx.match[3];
+      await renderVipStepFilter(ctx, ageCode, genderCode, locCode);
     } catch (err) {
-      console.error("vip_save_country error:", err);
+      console.error("vip_ob_loc error:", err);
     }
   });
 
-  // Step 5: Direct Gender Filter Menu entry
+  // 5. Step 4 -> Step 5: User picked filter code -> Show Review Screen with COMPLETE button!
+  bot.action(/^vip_ob_rev_(\d+)_(M|F|TM|TW|NB)_([A-Z0-9]+)_(F|M|TM|ANY)$/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery().catch(() => {});
+      const ageCode = ctx.match[1];
+      const genderCode = ctx.match[2];
+      const locCode = ctx.match[3];
+      const filterCode = ctx.match[4];
+      await renderVipReviewScreen(ctx, ageCode, genderCode, locCode, filterCode);
+    } catch (err) {
+      console.error("vip_ob_rev error:", err);
+    }
+  });
+
+  // 6. User clicked COMPLETE button! NOW AND ONLY NOW SAVE ALL DETAILS TO DATABASE!
+  bot.action(/^vip_ob_done_(\d+)_(M|F|TM|TW|NB)_([A-Z0-9]+)_(F|M|TM|ANY)$/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery("Saving profile...").catch(() => {});
+      const rawId = ctx.from?.id;
+      if (!rawId) return;
+
+      const ageCode = ctx.match[1];
+      const genderCode = ctx.match[2];
+      const locCode = ctx.match[3];
+      const filterCode = ctx.match[4];
+
+      const age = decodeAge(ageCode);
+      const gender = decodeGender(genderCode);
+      const country = decodeCountry(locCode);
+      const genderFilterPreference = decodeFilter(filterCode);
+      const telegramUserId = BigInt(rawId);
+
+      // Save to database
+      await saveUserSetting(telegramUserId, {
+        age,
+        gender,
+        country,
+        genderFilterPreference,
+      });
+
+      const successText =
+        `🎉 <b>VIP Setup Completed &amp; Saved!</b> 👑\n\n` +
+        `✅ All your profile details and match filter have been saved:\n` +
+        `• <b>Your Gender:</b> ${genderLabel(genderCode)}\n` +
+        `• <b>Your Age:</b> ${ageLabel(ageCode)}\n` +
+        `• <b>Your Location:</b> ${countryLabel(locCode)}\n` +
+        `• <b>Target Match Filter:</b> <b>${filterLabel(filterCode)}</b>\n` +
+        `• <b>Match Priority:</b> ⭐ <b>80% ${filterLabel(filterCode)} / 20% Other</b>\n\n` +
+        `TalkBuddy will now match you according to your 80% preference!`;
+
+      const reply_markup = {
+        inline_keyboard: [
+          [
+            {
+              text: "🔎 Start Matching Now",
+              callback_data: "menu_find",
+            },
+          ],
+          [
+            {
+              text: "👑 VIP Menu",
+              callback_data: "vip_info",
+            },
+            {
+              text: "⬅️ Main Menu",
+              callback_data: "back_main_menu",
+            },
+          ],
+        ],
+      };
+
+      await safeEditOrReply(ctx, successText, reply_markup);
+    } catch (err) {
+      console.error("vip_ob_done error:", err);
+      await ctx.reply("❌ Error saving VIP profile. Please try again.");
+    }
+  });
+
+  // 7. Filter menu: User chooses a filter -> Ask to complete before saving
+  bot.action(/^vip_ask_filter_(Female|Male|Trans Man|ANY)$/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery().catch(() => {});
+      const preference = ctx.match[1];
+      const label =
+        preference === "Female"
+          ? "Women (Female) — 80% ratio"
+          : preference === "Male"
+          ? "Men (Male) — 80% ratio"
+          : preference === "Trans Man"
+          ? "Trans — 80% ratio"
+          : "Anyone (Fastest)";
+
+      const text =
+        `🎯 <b>Confirm VIP Gender Filter</b>\n\n` +
+        `You selected: <b>${label}</b>\n\n` +
+        `⚠️ <i>Filter will NOT be applied until you tap the Complete button below:</i>`;
+
+      const reply_markup = {
+        inline_keyboard: [
+          [
+            {
+              text: "✅ Complete & Apply Filter",
+              callback_data: `vip_save_filter_${preference}`,
+            },
+          ],
+          [
+            {
+              text: "⬅️ Cancel",
+              callback_data: "vip_filter_select",
+            },
+          ],
+        ],
+      };
+
+      await safeEditOrReply(ctx, text, reply_markup);
+    } catch (err) {
+      console.error("vip_ask_filter error:", err);
+    }
+  });
+
+  // 8. Filter menu: User clicked Complete & Apply Filter
+  bot.action(/^vip_save_filter_(Female|Male|Trans Man|ANY)$/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery("Saving filter...").catch(() => {});
+      const rawId = ctx.from?.id;
+      if (!rawId) return;
+
+      const preference = ctx.match[1];
+      const telegramUserId = BigInt(rawId);
+
+      await saveUserSetting(telegramUserId, {
+        genderFilterPreference: preference,
+      });
+
+      const label =
+        preference === "Female"
+          ? "Women (Female) — 80% ratio"
+          : preference === "Male"
+          ? "Men (Male) — 80% ratio"
+          : preference === "Trans Man"
+          ? "Trans — 80% ratio"
+          : "Anyone (Fastest)";
+
+      const text =
+        `✅ <b>VIP Gender Filter Saved!</b> 🎯\n\n` +
+        `Matching Preference: <b>${label}</b>\n\n` +
+        `Whenever you search for a partner, TalkBuddy will prioritize your selected filter!`;
+
+      const reply_markup = {
+        inline_keyboard: [
+          [
+            {
+              text: "🔎 Start Matching Now",
+              callback_data: "menu_find",
+            },
+          ],
+          [
+            {
+              text: "👑 VIP Gender Filter Menu",
+              callback_data: "vip_filter_select",
+            },
+            {
+              text: "⬅️ Main Menu",
+              callback_data: "back_main_menu",
+            },
+          ],
+        ],
+      };
+
+      await safeEditOrReply(ctx, text, reply_markup);
+    } catch (err) {
+      console.error("vip_save_filter error:", err);
+      await ctx.reply("❌ Error saving filter.");
+    }
+  });
+
+  // Entry: Direct filter menu
   bot.action("vip_filter_select", async (ctx) => {
     try {
       await ctx.answerCbQuery().catch(() => {});
@@ -459,60 +717,6 @@ export function registerVipOnboardingHandlers(bot: Telegraf) {
       if (user) await renderVipGenderFilterMenu(ctx, user);
     } catch (err) {
       console.error("vip_filter_select error:", err);
-    }
-  });
-
-  // Step 5: Set Gender Filter Preference
-  bot.action(/^vip_set_filter_(Male|Female|Trans Man|Trans Woman|ANY)$/, async (ctx) => {
-    try {
-      const rawId = ctx.from?.id;
-      if (!rawId) {
-        await ctx.answerCbQuery().catch(() => {});
-        return;
-      }
-      const preference = ctx.match[1];
-      const telegramUserId = BigInt(rawId);
-
-      const user = await prisma.user.findUnique({
-        where: { telegramUserId },
-      });
-      if (!user) {
-        await ctx.answerCbQuery().catch(() => {});
-        return;
-      }
-
-      const vipInfo = await getUserVipStatus(user.id);
-      if (!vipInfo.isVip) {
-        await ctx.answerCbQuery("🔒 Gender Filter requires VIP. Upgrade via /vip!", { show_alert: true });
-        return;
-      }
-
-      await saveUserSetting(telegramUserId, {
-        genderFilterPreference: preference,
-      });
-
-      const label =
-        preference === "Female"
-          ? "Women (Female)"
-          : preference === "Male"
-          ? "Men (Male)"
-          : preference === "ANY"
-          ? "Anyone"
-          : preference;
-
-      await ctx.answerCbQuery(`✅ Gender Filter set to: ${label}!`, { show_alert: true });
-
-      const updatedUser = await prisma.user.findUnique({
-        where: { telegramUserId },
-      });
-      if (updatedUser) {
-        await renderVipGenderFilterMenu(ctx, updatedUser);
-      }
-    } catch (err) {
-      console.error("vip_set_filter error:", err);
-      try {
-        await ctx.answerCbQuery().catch(() => {});
-      } catch {}
     }
   });
 }
